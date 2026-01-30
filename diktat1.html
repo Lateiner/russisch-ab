@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisches Diktat: Приятно познакомиться</title>
+    <style>
+        :root {
+            --primary: #3f51b5;
+            --bg-color: #f4f4f9;
+            --correct: #c8e6c9; /* Hellgrün Hintergrund */
+            --wrong: #ffcdd2;   /* Hellrot Hintergrund */
+            --text-color: #333;
+            --keyboard-bg: #e0e0e0;
+            --key-bg: #fff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 250px; /* Platz für Tastatur */
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        p.desc {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Diktat Zeile */
+        .dictation-row {
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: white;
+        }
+
+        .btn-audio { background: var(--primary); }
+        .btn-audio:hover { background: #303f9f; }
+        
+        .btn-solution { background: #ff9800; }
+        .btn-solution:hover { background: #f57c00; }
+
+        .btn-translate { background: #009688; }
+        .btn-translate:hover { background: #00796b; }
+
+        /* NEU: Reset Button Style */
+        .btn-reset { background: #e53935; }
+        .btn-reset:hover { background: #c62828; }
+
+        .translation-box {
+            font-style: italic;
+            color: #555;
+            margin-top: 5px;
+            display: none; /* Hidden by default */
+            padding: 5px 10px;
+            background: #f0f0f0;
+            border-left: 3px solid #009688;
+        }
+
+        /* Input Area Wrapper */
+        .input-wrapper {
+            position: relative;
+            font-size: 1.2rem;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 40px;
+            margin-top: 10px;
+        }
+
+        /* Das eigentliche Input (unsichtbarer Text, aber Caret sichtbar) */
+        .user-input {
+            width: 100%;
+            padding: 10px;
+            font-size: inherit;
+            font-family: inherit;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: transparent;
+            color: transparent; /* Text unsichtbar machen */
+            caret-color: black; /* Cursor sichtbar lassen */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2;
+        }
+
+        .user-input:focus {
+            outline: 2px solid var(--primary);
+        }
+
+        /* Der Hintergrund-Layer für Farben */
+        .backdrop {
+            width: 100%;
+            padding: 10px; /* Muss identisch zum Input sein */
+            font-size: inherit;
+            font-family: inherit;
+            border: 1px solid transparent; /* Platzhalter für Größe */
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            pointer-events: none; /* Klicks gehen durch zum Input */
+            white-space: pre-wrap; /* Zeilenumbruch wie im Input */
+            overflow-wrap: break-word;
+        }
+
+        span.char-correct { background-color: var(--correct); color: #000; }
+        span.char-wrong { background-color: var(--wrong); color: #000; }
+
+        /* Virtuelle Tastatur */
+        .keyboard-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--keyboard-bg);
+            padding: 10px 5px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .keyboard-container.hidden {
+            transform: translateY(100%);
+        }
+        
+        .kb-row {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .key {
+            background: var(--key-bg);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 30px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            flex: 1;
+            max-width: 50px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .key:active { background: #ddd; transform: translateY(1px); }
+        .key.wide { flex: 1.5; max-width: 70px; font-size: 0.9rem;}
+        .key.space { flex: 4; max-width: 300px; }
+
+        .toggle-kb {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            z-index: 101;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: none; /* Nur sichtbar wenn Tastatur versteckt */
+        }
+
+        @media (max-width: 600px) {
+            .key { min-width: 20px; font-size: 0.9rem; padding: 0;}
+            .container { padding: 10px; }
+            .btn { font-size: 0.8rem; padding: 6px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Russisches Diktat</h1>
+    <p class="desc">Hören Sie sich die Sätze an und schreiben Sie mit. Nutzen Sie die Bildschirmtastatur.</p>
+    
+    <div id="worksheet">
+        <!-- Inhalte werden per JS generiert -->
+    </div>
+</div>
+
+<button class="toggle-kb" id="toggleKbBtn" onclick="toggleKeyboard(true)">⌨️</button>
+
+<div class="keyboard-container" id="virtualKeyboard">
+    <div style="text-align: center; margin-bottom: 5px; font-size: 0.8rem; color: #555; cursor: pointer;" onclick="toggleKeyboard(false)">▼ Tastatur ausblenden</div>
+    <div class="kb-row" id="row1"></div>
+    <div class="kb-row" id="row2"></div>
+    <div class="kb-row" id="row3"></div>
+    <div class="kb-row" id="row4"></div>
+</div>
+
+<script>
+    // --- Daten ---
+    const textData = [
+        { ru: "Приятно познакомиться.", de: "Freut mich, Sie kennenzulernen." },
+        { ru: "Меня зовут Андрей.", de: "Ich heiße Andrei." },
+        { ru: "Мне девятнадцать лет.", de: "Ich bin neunzehn Jahre alt." },
+        { ru: "Я приехал в Германию из России.", de: "Ich bin aus Russland nach Deutschland gekommen." },
+        { ru: "Я студент и учусь здесь, в университете.", de: "Ich bin Student und studiere hier an der Universität." },
+        { ru: "Я знаю русский, английский и немецкие языки и немного говорю по-испански.", de: "Ich kann Russisch, Englisch und Deutsch und spreche ein wenig Spanisch." },
+        { ru: "Я уже был в Англии, в Испании, в Германии, в Греции и в Австрии.", de: "Ich war schon in England, Spanien, Deutschland, Griechenland und Österreich." },
+        { ru: "И хочу поехать в Америку.", de: "Und ich möchte nach Amerika reisen." },
+        { ru: "Я изучаю политику и экономику в университете, потому что это интересно и полезно.", de: "Ich studiere Politik und Wirtschaft an der Universität, weil es interessant und nützlich ist." },
+        { ru: "Каждое утро я завтракаю и читаю газету или смотрю новости по телевизору.", de: "Jeden Morgen frühstücke ich und lese Zeitung oder schaue Nachrichten im Fernsehen." },
+        { ru: "Мне нравится знать всё о мире.", de: "Ich mag es, alles über die Welt zu wissen." },
+        { ru: "Я хочу стать преподавателем и работать в институте.", de: "Ich möchte Dozent werden und an einem Institut arbeiten." },
+        { ru: "В понедельник, во вторник, в среду и в четверг, утром и днём я много занимаюсь и делаю домашние задания.", de: "Am Montag, Dienstag, Mittwoch und Donnerstag lerne ich morgens und tagsüber viel und mache Hausaufgaben." },
+        { ru: "В пятницу, в субботу и в воскресенье я отдыхаю.", de: "Am Freitag, Samstag und Sonntag ruhe ich mich aus." },
+        { ru: "Когда я отдыхаю, я обычно слушаю музыку, смотрю фильмы или гуляю.", de: "Wenn ich mich ausruhe, höre ich gewöhnlich Musik, schaue Filme oder gehe spazieren." },
+        { ru: "Вчера вечером я гулял в парке с подругой.", de: "Gestern Abend ging ich mit einer Freundin im Park spazieren." },
+        { ru: "Её зовут Маша.", de: "Sie heißt Mascha." },
+        { ru: "Она русская.", de: "Sie ist Russin." },
+        { ru: "Она красивая и умная.", de: "Sie ist schön und klug." },
+        { ru: "Мы много говорили о Германии и о России.", de: "Wir haben viel über Deutschland und Russland gesprochen." },
+        { ru: "Маше нравится история.", de: "Mascha mag Geschichte." },
+        { ru: "В субботу мы поедем в музей, и Маша будет много говорить об истории.", de: "Am Samstag fahren wir ins Museum und Mascha wird viel über Geschichte erzählen." },
+        { ru: "Я буду внимательно слушать её.", de: "Ich werde ihr aufmerksam zuhören." }
+    ];
+
+    // --- Tastatur Layout ---
+    const kbLayout = [
+        ["ё","1","2","3","4","5","6","7","8","9","0","-"],
+        ["й","ц","у","к","е","н","г","ш","щ","з","х","ъ"],
+        ["ф","ы","в","а","п","р","о","л","д","ж","э"],
+        ["shift","я","ч","с","м","и","т","ь","б","ю",".",","]
+    ];
+    let isShift = false;
+    let activeInputId = null;
+
+    // --- Initialisierung ---
+    const worksheetDiv = document.getElementById('worksheet');
+
+    function init() {
+        renderWorksheet();
+        renderKeyboard();
+    }
+
+    // --- Worksheet Rendering ---
+    function renderWorksheet() {
+        textData.forEach((item, index) => {
+            const row = document.createElement('div');
+            row.className = 'dictation-row';
+
+            // Controls
+            const controls = document.createElement('div');
+            controls.className = 'controls';
+
+            const btnSpeak = document.createElement('button');
+            btnSpeak.className = 'btn btn-audio';
+            btnSpeak.innerHTML = '🔊 Vorlesen';
+            btnSpeak.onclick = () => speak(item.ru);
+
+            const btnSolve = document.createElement('button');
+            btnSolve.className = 'btn btn-solution';
+            btnSolve.innerHTML = '👁️ Lösung anzeigen';
+            btnSolve.onclick = () => showSolution(index, item.ru);
+
+            const btnTrans = document.createElement('button');
+            btnTrans.className = 'btn btn-translate';
+            btnTrans.innerHTML = '🌐 Übersetzung';
+            btnTrans.onclick = () => toggleTrans(index);
+
+            // --- NEU: Reset Button ---
+            const btnReset = document.createElement('button');
+            btnReset.className = 'btn btn-reset';
+            btnReset.innerHTML = '🔄 Zurücksetzen';
+            btnReset.onclick = () => resetInput(index);
+
+            controls.append(btnSpeak, btnSolve, btnTrans, btnReset);
+
+            // Translation Container
+            const transDiv = document.createElement('div');
+            transDiv.id = `trans-${index}`;
+            transDiv.className = 'translation-box';
+            transDiv.innerText = item.de;
+
+            // Input Wrapper
+            const inputWrapper = document.createElement('div');
+            inputWrapper.className = 'input-wrapper';
+
+            // Backdrop (Colors)
+            const backdrop = document.createElement('div');
+            backdrop.id = `backdrop-${index}`;
+            backdrop.className = 'backdrop';
+
+            // Actual Input
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'user-input';
+            input.id = `input-${index}`;
+            input.autocomplete = "off";
+            input.spellcheck = false;
+            
+            // Events
+            input.addEventListener('input', (e) => validateInput(index, item.ru, e.target.value));
+            input.addEventListener('focus', () => {
+                activeInputId = `input-${index}`;
+                showKeyboardOnMobile();
+            });
+
+            inputWrapper.append(backdrop, input);
+            row.append(controls, transDiv, inputWrapper);
+            worksheetDiv.appendChild(row);
+        });
+    }
+
+    // --- Logik Funktionen ---
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ru-RU';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleTrans(index) {
+        const el = document.getElementById(`trans-${index}`);
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function showSolution(index, solution) {
+        const input = document.getElementById(`input-${index}`);
+        input.value = solution;
+        validateInput(index, solution, solution); // Farben aktualisieren
+        input.focus();
+    }
+
+    // --- NEU: Reset Funktion ---
+    function resetInput(index) {
+        const input = document.getElementById(`input-${index}`);
+        const backdrop = document.getElementById(`backdrop-${index}`);
+        
+        input.value = ''; // Text leeren
+        backdrop.innerHTML = ''; // Farben entfernen
+        
+        // Fokus auf das Feld setzen
+        input.focus();
+    }
+
+    function validateInput(index, correctText, currentVal) {
+        const backdrop = document.getElementById(`backdrop-${index}`);
+        let html = '';
+        
+        for (let i = 0; i < currentVal.length; i++) {
+            const char = currentVal[i];
+            
+            if (i >= correctText.length) {
+                // Zu viel getippt
+                html += `<span class="char-wrong">${char}</span>`;
+            } else if (char === correctText[i]) {
+                html += `<span class="char-correct">${char}</span>`;
+            } else {
+                html += `<span class="char-wrong">${char}</span>`;
+            }
+        }
+        backdrop.innerHTML = html;
+    }
+
+    // --- Tastatur Logik ---
+
+    function renderKeyboard() {
+        const row1 = document.getElementById('row1');
+        const row2 = document.getElementById('row2');
+        const row3 = document.getElementById('row3');
+        const row4 = document.getElementById('row4');
+        
+        row1.innerHTML = ''; row2.innerHTML = ''; row3.innerHTML = ''; row4.innerHTML = '';
+
+        kbLayout.forEach((row, rIndex) => {
+            let container = null;
+            if (rIndex === 0) container = row1;
+            if (rIndex === 1) container = row2;
+            if (rIndex === 2) container = row3;
+            if (rIndex === 3) container = row4;
+
+            row.forEach(key => {
+                const keyBtn = document.createElement('div');
+                keyBtn.className = 'key';
+                
+                let displayKey = key;
+                if (isShift && key.length === 1) displayKey = key.toUpperCase();
+                
+                if (key === 'shift') {
+                    keyBtn.innerText = '⇧';
+                    keyBtn.className += ' wide';
+                    keyBtn.onclick = toggleShift;
+                    if (isShift) keyBtn.style.background = '#ccc';
+                } else {
+                    keyBtn.innerText = displayKey;
+                    keyBtn.onclick = () => handleKeyPress(displayKey);
+                }
+                
+                container.appendChild(keyBtn);
+            });
+        });
+
+        // Space row extra
+        const spaceRow = document.createElement('div');
+        spaceRow.className = 'kb-row';
+        const spaceKey = document.createElement('div');
+        spaceKey.className = 'key space';
+        spaceKey.innerHTML = '_______________';
+        spaceKey.onclick = () => handleKeyPress(' ');
+        spaceRow.appendChild(spaceKey);
+        
+        // Backspace
+        const bkspKey = document.createElement('div');
+        bkspKey.className = 'key wide';
+        bkspKey.innerHTML = '⌫';
+        bkspKey.onclick = handleBackspace;
+        spaceRow.appendChild(bkspKey);
+
+        document.getElementById('virtualKeyboard').appendChild(spaceRow);
+    }
+
+    function toggleShift() {
+        isShift = !isShift;
+        const kbContainer = document.getElementById('virtualKeyboard');
+        kbContainer.innerHTML = `
+            <div style="text-align: center; margin-bottom: 5px; font-size: 0.8rem; color: #555; cursor: pointer;" onclick="toggleKeyboard(false)">▼ Tastatur ausblenden</div>
+            <div class="kb-row" id="row1"></div>
+            <div class="kb-row" id="row2"></div>
+            <div class="kb-row" id="row3"></div>
+            <div class="kb-row" id="row4"></div>
+        `;
+        renderKeyboard();
+    }
+
+    function handleKeyPress(char) {
+        if (!activeInputId) return;
+        const input = document.getElementById(activeInputId);
+        
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const val = input.value;
+
+        input.value = val.slice(0, start) + char + val.slice(end);
+        input.selectionStart = input.selectionEnd = start + 1;
+        
+        // Trigger Input Event manually
+        const event = new Event('input', { bubbles: true });
+        input.dispatchEvent(event);
+        input.focus();
+        
+        if (isShift) toggleShift();
+    }
+
+    function handleBackspace() {
+        if (!activeInputId) return;
+        const input = document.getElementById(activeInputId);
+        
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const val = input.value;
+
+        if (start === end) {
+            if (start === 0) return;
+            input.value = val.slice(0, start - 1) + val.slice(end);
+            input.selectionStart = input.selectionEnd = start - 1;
+        } else {
+            input.value = val.slice(0, start) + val.slice(end);
+            input.selectionStart = input.selectionEnd = start;
+        }
+
+        const event = new Event('input', { bubbles: true });
+        input.dispatchEvent(event);
+        input.focus();
+    }
+
+    function toggleKeyboard(show) {
+        const kb = document.getElementById('virtualKeyboard');
+        const btn = document.getElementById('toggleKbBtn');
+        if (show) {
+            kb.classList.remove('hidden');
+            btn.style.display = 'none';
+        } else {
+            kb.classList.add('hidden');
+            btn.style.display = 'block';
+        }
+    }
+
+    function showKeyboardOnMobile() {
+        const kb = document.getElementById('virtualKeyboard');
+        if (kb.classList.contains('hidden')) {
+            toggleKeyboard(true);
+        }
+    }
+
+    // Start
+    init();
+
+</script>
+
+</body>
+</html>
