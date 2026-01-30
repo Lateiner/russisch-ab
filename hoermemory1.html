@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hör-Memory: 10 Paare</title>
+    <style>
+        :root {
+            --primary: #3f51b5;
+            --secondary: #4caf50;
+            --bg-color: #f4f4f9;
+            --card-back: #2c3e50;
+            --card-front-audio: #e8eaf6;
+            --card-front-text: #e8f5e9;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary); margin-bottom: 10px; font-size: 1.8rem; }
+        .desc { color: #666; margin-bottom: 20px; font-size: 1rem; }
+
+        .stats {
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: var(--primary);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: inline-block;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Memory Grid */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 15px;
+            perspective: 1000px;
+        }
+
+        /* Die Karte */
+        .memory-card {
+            height: 120px;
+            position: relative;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+        }
+
+        .memory-card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .memory-card.matched {
+            visibility: hidden; /* Karte verschwindet bei Erfolg */
+            pointer-events: none;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            font-size: 1.1rem;
+            padding: 10px;
+            text-align: center;
+            word-wrap: break-word;
+            border: 2px solid white;
+        }
+
+        /* Rückseite (Fragezeichen) */
+        .card-back {
+            background-color: var(--card-back);
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        /* Vorderseite (Inhalt) */
+        .card-front {
+            transform: rotateY(180deg);
+        }
+
+        .card-audio {
+            background-color: var(--card-front-audio);
+            border: 3px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .card-audio::after {
+            content: "🔊";
+            font-size: 2.5rem;
+        }
+
+        .card-text {
+            background-color: var(--card-front-text);
+            border: 3px solid var(--secondary);
+            color: var(--secondary);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            margin-top: 40px;
+        }
+
+        .btn-reset {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-reset:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* Mobile Anpassung */
+        @media (max-width: 600px) {
+            .memory-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 Spalten auf Handys */
+                gap: 10px;
+            }
+            .memory-card { height: 110px; }
+            h1 { font-size: 1.5rem; }
+            .card-text { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Hör-Memory: Андрей</h1>
+    <p class="desc">Finden Sie die 10 Paare: Eine Karte spielt das Wort (🔊), die andere zeigt das russische Wort als Text.</p>
+
+    <div class="stats" id="stats">Paare gefunden: 0 / 10</div>
+
+    <div class="memory-grid" id="grid">
+        <!-- Karten werden per JS generiert -->
+    </div>
+
+    <div class="controls">
+        <button class="btn-reset" onclick="initGame()">Spiel neu starten</button>
+    </div>
+</div>
+
+<script>
+    // 10 Vokabel-Paare aus dem Kontext "Andrei"
+    const vocabulary = [
+        "университет",
+        "политика",
+        "экономика",
+        "студент",
+        "история",
+        "красивая",
+        "новости",
+        "музей",
+        "Германия",
+        "Россия"
+    ];
+
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let lockBoard = false;
+
+    function initGame() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        flippedCards = [];
+        matchedPairs = 0;
+        lockBoard = false;
+        updateStats();
+
+        // Deck erstellen (10 Audio + 10 Text)
+        const deck = [];
+        vocabulary.forEach(word => {
+            deck.push({ word: word, type: 'audio' });
+            deck.push({ word: word, type: 'text' });
+        });
+
+        // Zufällig mischen
+        deck.sort(() => Math.random() - 0.5);
+
+        // Karten im DOM erzeugen
+        deck.forEach((item) => {
+            const card = document.createElement('div');
+            card.className = 'memory-card';
+            card.dataset.word = item.word;
+            card.dataset.type = item.type;
+            
+            card.innerHTML = `
+                <div class="card-face card-back">?</div>
+                <div class="card-face card-front ${item.type === 'audio' ? 'card-audio' : 'card-text'}">
+                    ${item.type === 'text' ? item.word : ''}
+                </div>
+            `;
+            
+            card.addEventListener('click', flipCard);
+            grid.appendChild(card);
+        });
+    }
+
+    function flipCard() {
+        if (lockBoard) return; // Klicks ignorieren während Prüfung läuft
+        if (this === flippedCards[0]) return; // Dieselbe Karte zweimal geklickt
+
+        this.classList.add('flipped');
+
+        // Sprachausgabe bei Audio-Karten
+        if (this.dataset.type === 'audio') {
+            speak(this.dataset.word);
+        }
+
+        flippedCards.push(this);
+
+        if (flippedCards.length === 2) {
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        const [card1, card2] = flippedCards;
+        
+        // Match Bedingung: Gleiches Wort aber unterschiedlicher Typ (Audio vs Text)
+        const isMatch = card1.dataset.word === card2.dataset.word && 
+                        card1.dataset.type !== card2.dataset.type;
+
+        if (isMatch) {
+            disableCards();
+        } else {
+            unflipCards();
+        }
+    }
+
+    function disableCards() {
+        lockBoard = true;
+        matchedPairs++;
+        updateStats();
+
+        setTimeout(() => {
+            flippedCards[0].classList.add('matched');
+            flippedCards[1].classList.add('matched');
+            resetBoard();
+            
+            if (matchedPairs === vocabulary.length) {
+                setTimeout(() => {
+                    alert("Glückwunsch! Alle 10 Begriffe wurden korrekt zugeordnet.");
+                }, 300);
+            }
+        }, 800);
+    }
+
+    function unflipCards() {
+        lockBoard = true;
+        setTimeout(() => {
+            flippedCards[0].classList.remove('flipped');
+            flippedCards[1].classList.remove('flipped');
+            resetBoard();
+        }, 1200);
+    }
+
+    function resetBoard() {
+        flippedCards = [];
+        lockBoard = false;
+    }
+
+    function updateStats() {
+        document.getElementById('stats').innerText = `Paare gefunden: ${matchedPairs} / ${vocabulary.length}`;
+    }
+
+    function speak(text) {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel(); 
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ru-RU';
+        utterance.rate = 0.85; // Etwas langsamer für besseres Verständnis
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // Initialisierung beim Start
+    initGame();
+</script>
+
+</body>
+</html>
