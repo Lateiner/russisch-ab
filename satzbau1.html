@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russische Schüttelsätze: Syntax-Training</title>
+    <style>
+        :root {
+            --primary: #3f51b5; 
+            --primary-dark: #303f9f;
+            --bg-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --word-bg: #e8eaf6;
+            --word-border: #c5cae9;
+            --text-color: #333;
+            --success: #4caf50;
+            --error: #f44336;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--container-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        p.desc {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .progress {
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        /* --- Bereiche für die Wörter --- */
+        
+        .area-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 5px;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .word-zone {
+            min-height: 80px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        /* Zielbereich (Satzbildung) */
+        #target-zone {
+            background-color: #fff;
+            border: 2px dashed #ccc;
+            margin-bottom: 20px;
+        }
+        
+        #target-zone.drag-over {
+            background-color: #e3f2fd;
+            border-color: var(--primary);
+        }
+
+        #target-zone.correct {
+            border-color: var(--success);
+            background-color: #e8f5e9;
+        }
+
+        #target-zone.wrong {
+            border-color: var(--error);
+            background-color: #ffebee;
+        }
+
+        /* Quellbereich (Wortpool) */
+        #source-zone {
+            background-color: #fafafa;
+            border: 1px solid #eee;
+        }
+
+        /* --- Die Wort-Kacheln --- */
+        .word-tile {
+            background-color: var(--word-bg);
+            border: 1px solid var(--word-border);
+            color: var(--primary-dark);
+            padding: 10px 18px;
+            border-radius: 20px;
+            cursor: pointer; 
+            font-size: 1.2rem;
+            user-select: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+            cursor: grab;
+        }
+
+        .word-tile:active {
+            cursor: grabbing;
+        }
+
+        .word-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            background-color: #fff;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            color: white;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-check { background: var(--primary); }
+        .btn-check:hover { background: var(--primary-dark); }
+
+        .btn-reset { background: #ff9800; }
+        .btn-reset:hover { background: #f57c00; }
+
+        .btn-solve { background: #9c27b0; } /* Lila für Lösung */
+        .btn-solve:hover { background: #7b1fa2; }
+
+        .btn-next { background: var(--success); display: none; } 
+        .btn-next:hover { background: #388e3c; }
+
+        /* Feedback Nachricht */
+        #feedback-msg {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 1.5em;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .word-tile { padding: 8px 14px; font-size: 1rem; }
+            h1 { font-size: 1.5rem; }
+            .btn { flex: 1; justify-content: center; font-size: 0.9rem; padding: 10px; }
+            .controls { gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Satzbau-Training</h1>
+    <p class="desc">Bringen Sie die Wörter in die richtige Reihenfolge.<br>
+    <small>(Ziehen Sie die Wörter mit der Maus oder tippen Sie sie an.)</small></p>
+
+    <div class="progress" id="progress-display">Satz 1 / 10</div>
+
+    <div class="area-label">Ihr Satz:</div>
+    <div id="target-zone" class="word-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <!-- Hier landen die Wörter -->
+    </div>
+
+    <div class="area-label">Wortvorrat:</div>
+    <div id="source-zone" class="word-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <!-- Hier starten die Wörter -->
+    </div>
+
+    <div id="feedback-msg"></div>
+
+    <div class="controls">
+        <button class="btn btn-reset" onclick="resetCurrentSentence()">🔄 Neu</button>
+        <button class="btn btn-solve" onclick="showSolution()">👁️ Lösung</button>
+        <button class="btn btn-check" id="btn-check" onclick="checkAnswer()">✔️ Prüfen</button>
+        <button class="btn btn-next" id="btn-next" onclick="nextSentence()">Nächster ➔</button>
+    </div>
+</div>
+
+<script>
+    // --- Daten aus dem Text "Andrei" ---
+    const sentences = [
+        "Меня зовут Андрей.",
+        "Я приехал в Германию из России.",
+        "Я студент и учусь в университете.",
+        "Мне девятнадцать лет.",
+        "Я немного говорю по-испански.",
+        "Я хочу поехать в Америку.",
+        "Каждое утро я читаю газету.",
+        "Мне нравится знать всё о мире.",
+        "В субботу мы поедем в музей.",
+        "Она красивая и умная."
+    ];
+
+    let currentIndex = 0;
+    let currentWords = [];
+
+    const targetZone = document.getElementById('target-zone');
+    const sourceZone = document.getElementById('source-zone');
+    const feedbackMsg = document.getElementById('feedback-msg');
+    const btnCheck = document.getElementById('btn-check');
+    const btnNext = document.getElementById('btn-next');
+    const progressDisplay = document.getElementById('progress-display');
+
+    function init() {
+        loadSentence(currentIndex);
+    }
+
+    function loadSentence(index) {
+        targetZone.innerHTML = '';
+        sourceZone.innerHTML = '';
+        targetZone.className = 'word-zone';
+        feedbackMsg.innerText = '';
+        feedbackMsg.style.color = 'inherit';
+        btnCheck.style.display = 'flex';
+        btnCheck.disabled = false;
+        btnNext.style.display = 'none';
+        progressDisplay.innerText = `Satz ${index + 1} / ${sentences.length}`;
+
+        const sentence = sentences[index];
+        const parts = sentence.split(' ');
+        
+        // IDs werden basierend auf der KORREKTEN Reihenfolge (0, 1, 2...) vergeben
+        currentWords = parts.map((word, i) => ({
+            id: `w-${i}`,
+            text: word
+        }));
+
+        const shuffled = [...currentWords];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        shuffled.forEach(item => {
+            const tile = createTile(item);
+            sourceZone.appendChild(tile);
+        });
+    }
+
+    function createTile(item) {
+        const div = document.createElement('div');
+        div.className = 'word-tile';
+        div.innerText = item.text;
+        div.id = item.id;
+        div.draggable = true;
+        div.addEventListener('dragstart', dragStart);
+        div.addEventListener('click', () => moveTile(div));
+        return div;
+    }
+
+    function moveTile(element) {
+        if (element.parentElement === sourceZone) {
+            targetZone.appendChild(element);
+        } else {
+            sourceZone.appendChild(element);
+        }
+        resetFeedbackStyle();
+    }
+
+    function allowDrop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.add('drag-over');
+    }
+
+    function dragStart(ev) {
+        ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    function drop(ev) {
+        ev.preventDefault();
+        ev.currentTarget.classList.remove('drag-over');
+        const data = ev.dataTransfer.getData("text");
+        const element = document.getElementById(data);
+        if (ev.currentTarget.classList.contains('word-zone')) {
+            ev.currentTarget.appendChild(element);
+        }
+        resetFeedbackStyle();
+    }
+
+    function resetFeedbackStyle() {
+        targetZone.className = 'word-zone';
+        feedbackMsg.innerText = '';
+        btnCheck.disabled = false;
+    }
+
+    function resetCurrentSentence() {
+        loadSentence(currentIndex);
+    }
+
+    // --- NEU: Lösung anzeigen ---
+    function showSolution() {
+        // Da die IDs (w-0, w-1, w-2...) der korrekten Reihenfolge entsprechen,
+        // müssen wir sie nur in dieser Reihenfolge in die targetZone schieben.
+        
+        currentWords.forEach(wordObj => {
+            const tile = document.getElementById(wordObj.id);
+            if(tile) {
+                targetZone.appendChild(tile);
+            }
+        });
+        
+        // Prüfung auslösen, aber Text anpassen
+        checkAnswer(true);
+    }
+
+    function checkAnswer(isSolutionButton = false) {
+        const tiles = targetZone.querySelectorAll('.word-tile');
+        const userSentence = Array.from(tiles).map(t => t.innerText).join(' ');
+        const correctSentence = sentences[currentIndex];
+
+        if (userSentence === correctSentence) {
+            targetZone.classList.add('correct');
+            feedbackMsg.innerText = isSolutionButton ? 'Lösung angezeigt.' : 'Отлично! (Ausgezeichnet!)';
+            feedbackMsg.style.color = isSolutionButton ? '#555' : 'var(--success)';
+            btnCheck.style.display = 'none';
+            
+            if (currentIndex < sentences.length - 1) {
+                btnNext.style.display = 'flex';
+                if (!isSolutionButton) btnNext.focus();
+            } else {
+                feedbackMsg.innerText += ' - Alle Sätze erledigt!';
+            }
+        } else {
+            targetZone.classList.add('wrong');
+            feedbackMsg.innerText = 'Noch nicht ganz richtig. Versuche es nochmal!';
+            feedbackMsg.style.color = 'var(--error)';
+            setTimeout(() => {
+                targetZone.classList.remove('wrong');
+            }, 1000);
+        }
+    }
+
+    function nextSentence() {
+        currentIndex++;
+        if (currentIndex < sentences.length) {
+            loadSentence(currentIndex);
+        }
+    }
+
+    init();
+
+</script>
+
+</body>
+</html>
