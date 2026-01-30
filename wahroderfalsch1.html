@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leseverstehen: 10 Fragen zu Андрей</title>
+    <style>
+        :root {
+            --primary: #3f51b5;
+            --primary-dark: #303f9f;
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --success: #4caf50;
+            --error: #f44336;
+            --neutral: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .desc {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
+        .question-card {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .question-text {
+            font-size: 1.15rem;
+            font-weight: 500;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn-opt {
+            flex: 1;
+            border: 2px solid var(--neutral);
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .btn-opt:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-opt.correct {
+            background-color: var(--success) !important;
+            border-color: var(--success) !important;
+            color: white !important;
+        }
+
+        .btn-opt.wrong {
+            background-color: var(--error) !important;
+            border-color: var(--error) !important;
+            color: white !important;
+        }
+
+        .btn-opt:disabled {
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        .feedback {
+            margin-top: 12px;
+            font-size: 0.95rem;
+            display: none;
+            padding: 10px;
+            border-radius: 5px;
+            background: #fff;
+            border-left: 4px solid var(--primary);
+        }
+
+        .score-container {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .btn-reset {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .options { flex-direction: column; }
+            .question-text { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Leseverstehen: Андрей</h1>
+    <p class="desc">Entscheiden Sie anhand des Textes, ob die folgenden 10 Aussagen wahr oder falsch sind.</p>
+
+    <div id="quiz-area">
+        <!-- Fragen werden hier generiert -->
+    </div>
+
+    <div class="score-container" id="score-container">
+        <h2 id="score-text">Ergebnis: 0 / 10</h2>
+        <button class="btn-reset" onclick="resetQuiz()">Übung wiederholen</button>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            q: "Андрей приехал в Германию из России.",
+            correct: true,
+            info: "Richtig. Er sagt im Text direkt: 'Я приехал в Германию из России.'"
+        },
+        {
+            q: "Андрею двадцать лет.",
+            correct: false,
+            info: "Falsch. Er sagt: 'Мне девятнадцать (19) лет.'"
+        },
+        {
+            q: "Он изучает политику и экономику в университете.",
+            correct: true,
+            info: "Richtig. Er studiert diese Fächer, weil er sie interessant und nützlich findet."
+        },
+        {
+            q: "Андрей хочет стать врачом.",
+            correct: false,
+            info: "Falsch. Er möchte Lehrer/Dozent (преподавателем) werden."
+        },
+        {
+            q: "Он уже был в Греции и в Австрии.",
+            correct: true,
+            info: "Richtig. Diese Länder werden in seiner Liste der bereits besuchten Orte genannt."
+        },
+        {
+            q: "Каждое утро Андрей читает газету или смотрит новости.",
+            correct: true,
+            info: "Richtig. Er möchte alles über die Welt wissen."
+        },
+        {
+            q: "В пятницу Андрей много занимается и делает домашние задания.",
+            correct: false,
+            info: "Falsch. Freitag, Samstag und Sonntag sind seine Ruhetage (я отдыхаю)."
+        },
+        {
+            q: "Маша — русская подруга Андрея.",
+            correct: true,
+            info: "Richtig. Er stellt sie als 'подруга' vor und sagt 'Она русская'."
+        },
+        {
+            q: "Маше нравится математика.",
+            correct: false,
+            info: "Falsch. Im Text steht: 'Маше нравится история' (Geschichte)."
+        },
+        {
+            q: "В субботу Андрей и Маша пойдут в кино.",
+            correct: false,
+            info: "Falsch. Sie planen, in ein Museum (в музей) zu gehen."
+        }
+    ];
+
+    let solvedCount = 0;
+    let correctCount = 0;
+
+    function initQuiz() {
+        const quizArea = document.getElementById('quiz-area');
+        quizArea.innerHTML = '';
+        solvedCount = 0;
+        correctCount = 0;
+        document.getElementById('score-container').style.display = 'none';
+
+        quizData.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            card.innerHTML = `
+                <span class="question-text">${index + 1}. ${item.q}</span>
+                <div class="options">
+                    <button class="btn-opt" onclick="check(this, ${index}, true)">Wahr</button>
+                    <button class="btn-opt" onclick="check(this, ${index}, false)">Falsch</button>
+                </div>
+                <div class="feedback" id="feedback-${index}">${item.info}</div>
+            `;
+            quizArea.appendChild(card);
+        });
+    }
+
+    function check(btn, index, userChoice) {
+        const card = btn.parentElement.parentElement;
+        const buttons = card.querySelectorAll('.btn-opt');
+        const feedback = document.getElementById(`feedback-${index}`);
+        const isCorrect = userChoice === quizData[index].correct;
+
+        buttons.forEach(b => b.disabled = true);
+
+        if (isCorrect) {
+            btn.classList.add('correct');
+            correctCount++;
+        } else {
+            btn.classList.add('wrong');
+            buttons.forEach(b => {
+                const bText = b.innerText;
+                if ((bText === "Wahr" && quizData[index].correct) || (bText === "Falsch" && !quizData[index].correct)) {
+                    b.style.borderColor = "var(--success)";
+                    b.style.color = "var(--success)";
+                }
+            });
+        }
+
+        feedback.style.display = 'block';
+        
+        solvedCount++;
+        if (solvedCount === quizData.length) {
+            showFinalScore();
+        }
+    }
+
+    function showFinalScore() {
+        const container = document.getElementById('score-container');
+        const text = document.getElementById('score-text');
+        container.style.display = 'block';
+        text.innerText = `Ergebnis: ${correctCount} von ${quizData.length} richtig!`;
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    function resetQuiz() {
+        initQuiz();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
